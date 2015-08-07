@@ -149,7 +149,9 @@ class DefaultTerms {
 
       foreach($taxonomy->object_type as $post_type) {
         // Find all the posts (or other post type) that don't already have terms
-        // for this taxonomy (a.k.a. they are still in a "default" state)
+        // for this taxonomy (a.k.a. They are still in a "default" state. So if
+        // you added a default to post_tag, find all posts without any
+        // post_tags.)
         $post_ids = $wpdb->get_col(
           $wpdb->prepare(
             "SELECT *
