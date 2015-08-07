@@ -104,7 +104,7 @@ class DefaultTerms {
       return false;
     }
     
-    // $wpdb->query("START TRANSACTION");
+    $wpdb->query("START TRANSACTION");
     $wpdb->query("SET unique_checks=0");
     
     // Insert the the relationships from post_ids => $defaults
@@ -114,14 +114,16 @@ class DefaultTerms {
     
     foreach($term_taxonomy_ids as $term_taxonomy_id) {
       foreach($object_ids as $object_id) {
-        $query .= $wpdb->prepare("(%d, %d)", $object_id, $term_taxonomy_id);
+        $query .= $wpdb->prepare("(%d, %d),", $object_id, $term_taxonomy_id);
       }
     }
-    $wpdb->query($query);
+
+    $query = rtrim($query, ',');
+    $a = $wpdb->query($query);
     
     // Commit the changes
     $wpdb->query("SET unique_checks=1");
-    // $wpdb->query("COMMIT");
+    $wpdb->query("COMMIT");
   }
   
   /**
@@ -146,12 +148,28 @@ class DefaultTerms {
       });
 
       foreach($taxonomy->object_type as $post_type) {
-        // Find all the posts that don't already have terms for this taxonomy
-        // (a.k.a. they are still in a "default" state)
+        // Find all the posts (or other post type) that don't already have terms
+        // for this taxonomy (a.k.a. they are still in a "default" state)
         $post_ids = $wpdb->get_col(
           $wpdb->prepare(
-            "SELECT * FROM {$wpdb->posts}
-            WHERE post_parent=0 AND post_type=%s",
+            "SELECT *
+            FROM {$wpdb->posts}
+            WHERE
+            NOT EXISTS (
+              SELECT *
+              FROM {$wpdb->term_relationships}
+              RIGHT JOIN
+                {$wpdb->term_taxonomy}
+                  ON {$wpdb->term_taxonomy}.term_taxonomy_id = {$wpdb->term_relationships}.term_taxonomy_id
+                  AND {$wpdb->term_taxonomy}.taxonomy = %s
+              WHERE
+                {$wpdb->term_relationships}.object_id = {$wpdb->posts}.id
+            )
+            AND {$wpdb->posts}.post_parent = 0
+            AND {$wpdb->posts}.post_type = %s
+            ORDER BY
+              {$wpdb->posts}.id",
+            $taxonomy->name,
             $post_type
           )
         );
