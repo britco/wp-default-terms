@@ -1,0 +1,16 @@
+{
+    "name": "britco/wp-default-types",
+    "type": "wordpress-plugin",
+    "authors": [
+        {
+            "name": "Paul Dufour",
+            "email": "paul@brit.co"
+        }
+    ],
+    "extra": {
+        "installer-name": "wp-default-terms"
+    },
+    "require": {
+       "composer/installers" : "~1.0"
+    }
+}
