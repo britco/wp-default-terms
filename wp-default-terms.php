@@ -10,18 +10,47 @@ Author URI: http://www.brit.co
 */
 
 class DefaultTerms {
-  private $option_prefix = 'brit_default_terms';
-  private $upgrade_taxonomies = array();
+  public $option_prefix = 'brit_default_terms';
+  public $upgrade_taxonomies = array();
   protected $logged_messages = array();
   
   function __construct() {
-    global $wp_taxonomies;
-
     add_action('registered_taxonomy', array($this, 'registered_taxonomy'), 20);
     add_action('schema_upgrade', array($this, 'schema_upgrade'));
   }
   
   private function log() {
+  }
+  
+  /**
+   * Set the defaults on a taxonomy. Used like $taxonomy->setDefaults(array('foo')).
+   * Normalizes the data so it looks like:
+   * [
+   *  post => ['foo'],
+   *  page => ['foo']
+   * ]
+   */
+  private function set_defaults($taxonomy, $defaults=array()) {
+    if(!is_array(array_values($defaults)[0])) {
+      // Not a two level array yet
+      sort($defaults);
+            
+      $new_defaults = array();
+      $object_types = $taxonomy->object_type;
+      
+      sort($object_types);
+      foreach($object_types as $object_type) {
+        $new_defaults[$object_type] = $defaults;
+      }
+      $taxonomy->defaults = $new_defaults;
+    } else {
+      // Sort the the keys and values
+      array_walk($defaults, function(&$value, $key) {
+        sort($value);
+      });
+      ksort($defaults);
+      $taxonomy->defaults = $defaults;
+    }
   }
   
   /**
@@ -56,41 +85,20 @@ class DefaultTerms {
    * @param  string $name Name of the taxonomy
    * @return array Array that is saved to the DB
    */
-  private function save_db_defaults($name) {
-  }
-  
-  /**
-   * When a new taxonomy is registered, check if the defaults are in sync,
-   * and if not, run a schema upgrade.
-   */
-  function registered_taxonomy($name) {
-    global $wp_taxonomies;
-    
-    $defaults = $this->get_db_defaults($name);
-    
-    $taxonomy = $wp_taxonomies[$name];
-        
-    if(!property_exists($taxonomy, 'defaults')) {
-      return;
+  private function save_db_defaults($taxonomy) {
+    if(!is_object($taxonomy)) {
+      $taxonomy = get_taxonomy($taxonomy);
     }
     
-    // Migrate defaults to multi-level array that looks like
-    // [
-    //  post_type => [
-    //    'Water'
-    //  ]
-    // ]
-    if(!is_array(array_values($taxonomy->defaults)[0])) {
-      $new_defaults = array();
-      foreach($taxonomy->object_type as $object_type) {
-        $new_defaults[$object_type] = $taxonomy->defaults;
-      }
-      $taxonomy->defaults = $new_defaults;
-    }
+    // (Re)normalize defaults
+    $taxonomy->setDefaults->__invoke($taxonomy->defaults);
     
-    if($taxonomy->defaults != $defaults) {
-      $this->upgrade_taxonomies[] = $taxonomy;
-    }
+    // Get the existing option
+    $defaults = get_site_option("{$this->option_prefix}");
+    
+    // Update the values for this key
+    $defaults[$taxonomy->name] = $taxonomy->defaults;
+    update_site_option($this->option_prefix, $defaults);
   }
   
   /**
@@ -127,6 +135,38 @@ class DefaultTerms {
   }
   
   /**
+   * When a new taxonomy is registered, check if the defaults are in sync,
+   * and if not, run a schema upgrade.
+   */
+  function registered_taxonomy($name) {
+    global $wp_taxonomies;
+    
+    $_this = $this;
+    
+    $defaults = $this->get_db_defaults($name);
+    
+    $taxonomy = $wp_taxonomies[$name];
+    
+    // Add a function set set the defaults property, so the data can be
+    // normalized.
+    $taxonomy->setDefaults = function() use ($taxonomy) {
+      $arguments = func_get_args();
+      array_unshift($arguments, $taxonomy);
+      return call_user_func_array(__NAMESPACE__ .'\DefaultTerms::set_defaults', $arguments);
+    };
+        
+    if(!property_exists($taxonomy, 'defaults')) {
+      return;
+    }
+    
+    $taxonomy->setDefaults->__invoke($taxonomy->defaults);
+    
+    if($taxonomy->defaults != $defaults) {
+      $this->upgrade_taxonomies[$name] = $taxonomy;
+    }
+  }
+  
+  /**
    * When a schema_upgrade action happens, fill in default terms. I.E. if post_tag
    * has a default term of "water", then any post without tags already set, will
    * get the tag "water".
@@ -138,7 +178,9 @@ class DefaultTerms {
       return false;
     }
     
-    foreach($this->upgrade_taxonomies as $taxonomy) {
+    foreach($this->upgrade_taxonomies as $name => $taxonomy) {
+      unset($this->upgrade_taxonomies[$name]);
+      
       // First insert the term if it doesn't exist
       array_walk_recursive($taxonomy->defaults, function($default) use ($taxonomy) {
         $term = term_exists($default, $taxonomy->name);
@@ -183,9 +225,12 @@ class DefaultTerms {
         }
         
         $this->assign_terms($post_ids, $term_ids);
+        
+        // Save the state of the defaults to the DB
+        $this->save_db_defaults($taxonomy);
       }
     }
   }
 }
 
-new DefaultTerms();
+$GLOBALS[__NAMESPACE__ . '_DefaultTerms'] = new DefaultTerms();
