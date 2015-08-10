@@ -1,5 +1,6 @@
 <?php
 namespace DefaultTerms;
+
 /*
 Plugin Name: Default Terms
 Plugin URI:
