@@ -1,5 +1,6 @@
 {
-    "name": "britco/wp-default-types",
+    "name": "britco/wp-default-terms",
+    "license": "MIT",
     "type": "wordpress-plugin",
     "authors": [
         {

@@ -1,5 +1,7 @@
 ## wp-default-terms
 
+[![Circle CI](https://circleci.com/gh/britco/wp-default-terms.svg?style=svg)](https://circleci.com/gh/britco/wp-default-terms)
+
 A way to set default terms for taxonomies. Similar how to the "default
 category" functionality works. Will backport the defaults you specify to old
 posts as well if you install the wp-schema plugin.
