@@ -6,7 +6,7 @@ Plugin Name: Default Terms
 Plugin URI:
 Description: Adds support for default taxonomy terms
 Author: Paul Dufour
-Version: 0.1
+Version:
 Author URI: http://www.brit.co
 */
 
