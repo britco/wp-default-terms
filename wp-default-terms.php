@@ -10,6 +10,10 @@ Version:
 Author URI: http://www.brit.co
 */
 
+if(class_exists('DefaultTerms')) {
+  return;
+}
+
 class DefaultTerms {
   public $option_prefix = 'brit_default_terms';
   public $upgrade_taxonomies = array();
