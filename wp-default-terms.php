@@ -20,9 +20,6 @@ class DefaultTerms {
     add_action('schema_upgrade', array($this, 'schema_upgrade'));
   }
   
-  private function log() {
-  }
-  
   /**
    * Set the defaults on a taxonomy. Used like $taxonomy->setDefaults(array('foo')).
    * Normalizes the data so it looks like:
