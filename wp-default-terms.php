@@ -107,14 +107,13 @@ class DefaultTerms {
    * Bulk insert rows into the term_relationships table
    * @return bool Success of insert
    */
-  function assign_terms($object_ids=array(), $term_taxonomy_ids=array()) {
+  function assign_terms($object_ids=array(), $term_taxonomy_ids=array(), $taxonomy=false) {
     global $wpdb;
     
-    if(empty($object_ids) || empty($term_taxonomy_ids)) {
+    if(empty($object_ids) || empty($term_taxonomy_ids) || empty($taxonomy)) {
       return false;
     }
     
-    $wpdb->query("START TRANSACTION");
     $wpdb->query("SET unique_checks=0");
     
     // Insert the the relationships from post_ids => $defaults
@@ -133,7 +132,9 @@ class DefaultTerms {
     
     // Commit the changes
     $wpdb->query("SET unique_checks=1");
-    $wpdb->query("COMMIT");
+    
+    // Update the "total" count for each term that was affected
+    wp_update_term_count_now($term_taxonomy_ids, $taxonomy->name);
   }
   
   /**
@@ -192,6 +193,10 @@ class DefaultTerms {
       });
 
       foreach($taxonomy->object_type as $post_type) {
+        if(!in_array($post_type, array_keys($taxonomy->defaults))) {
+          continue;
+        }
+          
         // Find all the posts (or other post type) that don't already have terms
         // for this taxonomy (a.k.a. They are still in a "default" state. So if
         // you added a default to post_tag, find all posts without any
@@ -225,8 +230,8 @@ class DefaultTerms {
           $term = get_term_by('name', $default, $taxonomy->name);
           $term_ids[] = $term->term_taxonomy_id;
         }
-        
-        $this->assign_terms($post_ids, $term_ids);
+      
+        $this->assign_terms($post_ids, $term_ids, $taxonomy);
         
         // Save the state of the defaults to the DB
         $this->save_db_defaults($taxonomy);

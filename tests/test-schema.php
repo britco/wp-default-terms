@@ -9,11 +9,7 @@ class SchemaTest extends WP_UnitTestCase {
   
     $_super = call_user_func_array(array($this, 'parent::setUp'), func_get_args());
     
-    $wpdb->query("TRUNCATE table {$wpdb->term_relationships}");
-    
     $wpdb->query("DELETE FROM {$wpdb->users} WHERE ID != 1");
-    
-    $this->author_id = $this->factory->user->create(array('role' => 'editor'));
     
     return $_super;
   }
@@ -60,17 +56,8 @@ class SchemaTest extends WP_UnitTestCase {
   public function testSchemaUpgrade() {
     global $wpdb;
     
-    // Insert test post
-    $post_data = array(
-      'post_author' => $this->author_id,
-      'post_status' => 'publish',
-      'post_content' => rand_str(),
-      'post_title' => rand_str(),
-      'post_type' => 'post'
-    );
-    
-    $post_id = wp_insert_post($post_data);
-    $post = get_post($post_id);
+    $post_id = $this->factory->post->create(array());
+    $post = $this->factory->post->get_object_by_id($post_id);
     
     // Insert test tag
     wp_insert_term('Water', 'post_tag');
@@ -87,28 +74,27 @@ class SchemaTest extends WP_UnitTestCase {
     do_action('schema_upgrade');
     
     $post_tags = array_values(wp_list_pluck(wp_get_post_tags($post_id), 'name'));
+    
+    wp_delete_post($post_id, true);
+    
     $this->assertEqualSets($post_tags, array('Water'));
   }
   
   /**
-   * Test that posts with existing tags don't get added new tags during a schema upgrade
+   * Test that posts with existing tags don't get added new tags during a schema
+   * upgrade
    */
-  public function testSchemaUpgradeExistingTags() {
+  public function tesetSchemaUpgradeExistingTags() {
     global $wpdb;
     
     // Insert test post
     $post_data = array(
-      'post_author' => $this->author_id,
-      'post_status' => 'publish',
-      'post_content' => rand_str(),
-      'post_title' => rand_str(),
-      'post_type' => 'post',
       'tags_input' => array('Juice')
     );
     
     // Insert test post (with tags already set)
-    $post_id = wp_insert_post($post_data);
-    $post = get_post($post_id);
+    $post_id = $this->factory->post->create($post_data);
+    $post = $this->factory->post->get_object_by_id($post_id);
     
     // Set the defaults for the post_tag taxonomy
     wp_insert_term('Water', 'post_tag');
@@ -121,6 +107,9 @@ class SchemaTest extends WP_UnitTestCase {
     
     // Check that the tags for the post weren't edited
     $post_tags = array_values(wp_list_pluck(wp_get_post_tags($post_id), 'name'));
+    
+    wp_delete_post($post_id, true);
+    
     $this->assertEqualSets($post_tags, array('Juice'));
   }
   
@@ -138,5 +127,29 @@ class SchemaTest extends WP_UnitTestCase {
     do_action('registered_taxonomy', 'post_tag');
     $this->assertEquals(count($GLOBALS['DefaultTerms_DefaultTerms']->upgrade_taxonomies), 0);
     do_action('schema_upgrade');
+  }
+  
+  /**
+   * Test that the count column on the term_taxonomy table gets updated
+   */
+  public function testUpdateTermCount() {
+    global $wpdb;
+    
+    $post_id1 = $this->factory->post->create(array());
+    $post_id2 = $this->factory->post->create(array());
+  
+    $tag = get_taxonomy('post_tag');
+    $tag->setDefaults->__invoke(array('Fan'));
+    
+    do_action('registered_taxonomy', 'post_tag');
+    $this->assertEquals(count($GLOBALS['DefaultTerms_DefaultTerms']->upgrade_taxonomies), 1);
+    do_action('schema_upgrade');
+    
+    $term = get_term_by('name', 'Fan', 'post_tag');
+    
+    wp_delete_post($post_id1, true);
+    wp_delete_post($post_id2, true);
+    
+    $this->assertEquals($term->count, 2);
   }
 }
