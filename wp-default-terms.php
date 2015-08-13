@@ -1,10 +1,10 @@
 <?php
-namespace DefaultTerms;
+namespace WP_Default_Terms;
 
 /*
-Plugin Name: Default Terms
+Plugin Name: WP Default Terms
 Plugin URI:
-Description: Adds support for default taxonomy terms
+Description: Adds support for default taxonomy terms.
 Author: Paul Dufour
 Version:
 Author URI: http://www.brit.co
@@ -18,8 +18,13 @@ class DefaultTerms {
   public $option_prefix = 'brit_default_terms';
   public $upgrade_taxonomies = array();
   protected $logged_messages = array();
+  public $is_wp_cli = false;
   
   function __construct() {
+    if(defined('WP_CLI') && WP_CLI) {
+      $this->is_wp_cli = true;
+    }
+    
     add_action('registered_taxonomy', array($this, 'registered_taxonomy'), 20);
     add_action('schema_upgrade', array($this, 'schema_upgrade'));
   }
@@ -84,8 +89,8 @@ class DefaultTerms {
   /**
    * Save new defaults for a taxonomy
    *
-   * @param  string $name Name of the taxonomy
-   * @return array Array that is saved to the DB
+   * @param  string $name Name of the taxonomy to sync defaults for. I.E. post_tag.
+   * @return array All default terms currently set
    */
   private function save_db_defaults($taxonomy) {
     if(!is_object($taxonomy)) {
@@ -101,10 +106,14 @@ class DefaultTerms {
     // Update the values for this key
     $defaults[$taxonomy->name] = $taxonomy->defaults;
     update_site_option($this->option_prefix, $defaults);
+    return $defaults;
   }
   
   /**
    * Bulk insert rows into the term_relationships table
+   * @param array List of post IDs (or oother object IDs)
+   * @param array List of term IDs
+   * @param mixed WP taxonomy object
    * @return bool Success of insert
    */
   function assign_terms($object_ids=array(), $term_taxonomy_ids=array(), $taxonomy=false) {
@@ -135,11 +144,13 @@ class DefaultTerms {
     
     // Update the "total" count for each term that was affected
     wp_update_term_count_now($term_taxonomy_ids, $taxonomy->name);
+    
+    return true;
   }
   
   /**
    * When a new taxonomy is registered, check if the defaults are in sync,
-   * and if not, run a schema upgrade.
+   * and if not, queue a schema upgrade.
    */
   function registered_taxonomy($name) {
     global $wp_taxonomies;
@@ -164,13 +175,14 @@ class DefaultTerms {
     
     $taxonomy->setDefaults->__invoke($taxonomy->defaults);
     
-    if($taxonomy->defaults != $defaults) {
+    // Queue a schema upgrade if in WP-CLI mode and defaults are not in sync
+    if($this->is_wp_cli && $taxonomy->defaults != $defaults) {
       $this->upgrade_taxonomies[$name] = $taxonomy;
     }
   }
   
   /**
-   * When a schema_upgrade action happens, fill in default terms. I.E. if post_tag
+   * Resync default terms for any taxonomies that are out of sync. I.E. if post_tag
    * has a default term of "water", then any post without tags already set, will
    * get the tag "water".
    */
@@ -184,7 +196,7 @@ class DefaultTerms {
     foreach($this->upgrade_taxonomies as $name => $taxonomy) {
       unset($this->upgrade_taxonomies[$name]);
       
-      // First insert the term if it doesn't exist
+      // First insert the term object if it doesn't exist
       array_walk_recursive($taxonomy->defaults, function($default) use ($taxonomy) {
         $term = term_exists($default, $taxonomy->name);
         if(empty($term)) {
@@ -197,7 +209,7 @@ class DefaultTerms {
           continue;
         }
           
-        // Find all the posts (or other post type) that don't already have terms
+        // Find all the posts (or other object type) that don't already have terms
         // for this taxonomy (a.k.a. They are still in a "default" state. So if
         // you added a default to post_tag, find all posts without any
         // post_tags.)
@@ -240,4 +252,4 @@ class DefaultTerms {
   }
 }
 
-$GLOBALS[__NAMESPACE__ . '_DefaultTerms'] = new DefaultTerms();
+$GLOBALS[__NAMESPACE__] = new DefaultTerms();
