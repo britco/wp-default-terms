@@ -3,7 +3,9 @@
 [![Circle CI](https://circleci.com/gh/britco/wp-default-terms.svg?style=svg)](https://circleci.com/gh/britco/wp-default-terms)
 
 A way to set default terms for taxonomies. Similar how to the "default
-category" functionality works. Will backport the defaults you specify to old
+category" functionality works, but for any taxonomy.
+
+Will backport the defaults you specify to old
 posts as well if you install the [wp-cli-schema plugin](https://github.com/britco/wp-cli-schema). So for example, if you add a default `Michael Jordan` for the taxonomy `People`, when you run `wp schema upgrade` it will add `Michael Jordan` to any post that doesn't have any existing `People` terms.
 
 ## Usage
