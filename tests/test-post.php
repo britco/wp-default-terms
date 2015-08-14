@@ -25,7 +25,7 @@ class PostTest extends UnitTestCase {
     $this->assertEqualSets($post_tags, array('I am a quot: "'));
   }
   
-  public function testCreatePostWithCategory() {
+  public function testCreatePostWithDefaultCategory() {
     wp_insert_term('cool cat', 'category');
     $taxonomy = get_taxonomy('category');
     $taxonomy->defaults = array('cool cat');
@@ -42,7 +42,7 @@ class PostTest extends UnitTestCase {
     $this->assertEqualSets($post_categories, array('Uncategorized', 'cool cat'));
   }
   
-  public function testCreatePostWithCategoryNotYetCreated() {
+  public function testCreatePostWithDefaultCategoryNotYetCreated() {
     $taxonomy = get_taxonomy('category');
     $taxonomy->defaults = array('not a cool cat');
     
