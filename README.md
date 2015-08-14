@@ -37,5 +37,12 @@ function custom_tax_init() {
 }
 ````
 
+Also, you can set defaults for already registered taxonomies
+
+```
+$taxonomy = get_taxonomy('post_tag');
+$taxonomy->defaults->set(array('paper'));
+```
+
 ## License
 Available under the MIT License.

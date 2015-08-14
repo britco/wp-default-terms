@@ -4,7 +4,7 @@ namespace WP_Default_Terms;
 use WP_UnitTestCase;
 
 // @codingStandardsIgnoreStart
-class PostTest extends WP_UnitTestCase {
+class PostTest extends UnitTestCase {
   // @codingStandardsIgnoreEnd
   
   public function testCreatePostWithDefaultTag() {

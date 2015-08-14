@@ -4,37 +4,8 @@ namespace WP_Default_Terms;
 use WP_UnitTestCase, ReflectionMethod;
 
 // @codingStandardsIgnoreStart
-class SchemaTest extends WP_UnitTestCase {
+class SchemaTest extends UnitTestCase {
   // @codingStandardsIgnoreEnd
-
-  public function setUp() {
-    global $wpdb;
-
-    $_super = call_user_func_array(array($this, 'parent::setUp'), func_get_args());
-
-    $wpdb->query("DELETE FROM {$wpdb->users} WHERE ID != 1");
-
-    // Insert test terms so that we can double check that the correct ID is used
-    // for wp_set_object_terms. (term_id and term_taxonomy_id will be two off
-    // now, so if the wrong id is used, the test will fail)
-    $wpdb->query("
-      INSERT INTO {$wpdb->terms} (`name`, `slug`, `term_group`)
-      VALUES
-        ('Test tag', 'test-tag', 0),
-        ('Test tag 2', 'test-tag-2', 0)
-    ");
-
-    // Mimic WP-CLI context
-    $GLOBALS['WP_Default_Terms']->is_wp_cli = true;
-
-    return $_super;
-  }
-
-  public function tearDown() {
-    $_super = call_user_func_array(array($this, 'parent::tearDown'), func_get_args());
-
-    return $_super;
-  }
 
   // Set default tags and then test syncing them to the DB
   public function testSaveDbDefaults() {
@@ -42,15 +13,15 @@ class SchemaTest extends WP_UnitTestCase {
     $methods = array_flip(array('save_db_defaults', 'normalize_defaults'));
 
     foreach($methods as $method => $empty) {
-      $methods[$method] = new ReflectionMethod('\\' . __NAMESPACE__ . '\DefaultTerms', 'save_db_defaults');
+      $methods[$method] = new ReflectionMethod('\\' . __NAMESPACE__ . '\Actions', 'save_db_defaults');
       $methods[$method]->setAccessible(true);
     }
 
-    $instance = new DefaultTerms();
+    $instance = new Actions();
 
     // Add defaults to the post_tag taxonomy
     $post_tag = get_taxonomy('post_tag');
-    $post_tag->setDefaults->__invoke(array('chair'));
+    $post_tag->defaults->set(array('chair'));
 
     // Save to DB
     $methods['save_db_defaults']->invoke($instance, 'post_tag');
@@ -131,17 +102,17 @@ class SchemaTest extends WP_UnitTestCase {
 
   public function testSkipSchemaUpgrade() {
     $tag = get_taxonomy('post_tag');
-    $tag->setDefaults->__invoke(array('Keyboard'));
+    $tag->defaults->set(array('Keyboard'));
 
     // Run the first schema upgrade, which should add "Keyboard" to all posts
     do_action('registered_taxonomy', 'post_tag');
-    $this->assertEquals(count($GLOBALS['WP_Default_Terms']->upgrade_taxonomies), 1);
+    $this->assertEquals(count(get_instance('Actions')->upgrade_taxonomies), 1);
     do_action('schema_upgrade');
 
     // Run the second schema upgrade (which shoudn't do anything since the
     // defaults are in sync)
     do_action('registered_taxonomy', 'post_tag');
-    $this->assertEquals(count($GLOBALS['WP_Default_Terms']->upgrade_taxonomies), 0);
+    $this->assertEquals(count(get_instance('Actions')->upgrade_taxonomies), 0);
     do_action('schema_upgrade');
   }
 
@@ -155,10 +126,10 @@ class SchemaTest extends WP_UnitTestCase {
     $post_id2 = $this->factory->post->create(array());
 
     $tag = get_taxonomy('post_tag');
-    $tag->setDefaults->__invoke(array('Fan'));
+    $tag->defaults->set(array('Fan'));
 
     do_action('registered_taxonomy', 'post_tag');
-    $this->assertEquals(count($GLOBALS['WP_Default_Terms']->upgrade_taxonomies), 1);
+    $this->assertEquals(count(get_instance('Actions')->upgrade_taxonomies), 1);
     do_action('schema_upgrade');
 
     $term = get_term_by('name', 'Fan', 'post_tag');
