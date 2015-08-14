@@ -24,7 +24,8 @@ class DefaultTerms {
     if(defined('WP_CLI') && WP_CLI) {
       $this->is_wp_cli = true;
     }
-    
+
+    add_action('wp_insert_post', array($this, 'wp_insert_post'), 11, 3);
     add_action('registered_taxonomy', array($this, 'registered_taxonomy'), 20);
     add_action('schema_upgrade', array($this, 'schema_upgrade'));
   }
@@ -247,6 +248,54 @@ class DefaultTerms {
         
         // Save the state of the defaults to the DB
         $this->save_db_defaults($taxonomy);
+      }
+    }
+  }
+  
+  /**
+   * Add default terms to new posts
+   */
+  public function wp_insert_post($post_ID, $post, $update) {
+    global $wp_taxonomies;
+    
+    if($update) {
+      return false;
+    }
+    
+    // Get an array of taxonomy name => default terms for this post type
+    $taxonomy_names = get_object_taxonomies($post->post_type);
+    $taxonomies = array_map('get_taxonomy', (array)$taxonomy_names);
+    foreach($taxonomies as $taxonomy) {
+      if(!property_exists($taxonomy, 'defaults') || !array_key_exists($post->post_type, $taxonomy->defaults)) {
+        continue;
+      }
+      
+      $defaults = array_filter($taxonomy->defaults[$post->post_type], 'strlen');
+      
+      if(!empty($defaults)) {
+        // Map term names to IDs (creates the term if it doesn't exist)
+        $terms = array_map(function($default) use ($taxonomy) {
+          // Get term
+          $term = get_term_by('name', $default . '', $taxonomy->name);
+          if(!empty($term) && !is_wp_error($term)) {
+            return $term->slug;
+          } else {
+            // Create term
+            wp_insert_term($default, $taxonomy->name);
+            $term = get_term_by('name', $default . '', $taxonomy->name);
+            
+            if(!empty($term) && !is_wp_error($term)) {
+              return $term->slug;
+            } else {
+              return false;
+            }
+          }
+        }, $defaults);
+        
+        // Remove empty terms
+        $terms = array_filter($terms, 'strlen');
+        
+        wp_set_object_terms($post_ID, $terms, $taxonomy->name, true);
       }
     }
   }

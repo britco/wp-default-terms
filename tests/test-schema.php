@@ -14,6 +14,16 @@ class SchemaTest extends WP_UnitTestCase {
 
     $wpdb->query("DELETE FROM {$wpdb->users} WHERE ID != 1");
 
+    // Insert test terms so that we can double check that the correct ID is used
+    // for wp_set_object_terms. (term_id and term_taxonomy_id will be two off
+    // now, so if the wrong id is used, the test will fail)
+    $wpdb->query("
+      INSERT INTO {$wpdb->terms} (`name`, `slug`, `term_group`)
+      VALUES
+        ('Test tag', 'test-tag', 0),
+        ('Test tag 2', 'test-tag-2', 0)
+    ");
+
     // Mimic WP-CLI context
     $GLOBALS['WP_Default_Terms']->is_wp_cli = true;
 
