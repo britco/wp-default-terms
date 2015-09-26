@@ -119,7 +119,9 @@ class Actions {
     
     $_this = $this;
     
-    $defaults = $this->get_db_defaults($name);
+    if($this->is_wp_cli) {
+      $defaults = $this->get_db_defaults($name);
+    }
     
     $taxonomy = $wp_taxonomies[$name];
 
