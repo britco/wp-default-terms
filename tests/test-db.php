@@ -4,7 +4,7 @@ namespace WP_Default_Terms;
 use WP_UnitTestCase, ReflectionMethod;
 
 // @codingStandardsIgnoreStart
-class SchemaTest extends UnitTestCase {
+class DBTest extends UnitTestCase {
   // @codingStandardsIgnoreEnd
 
   // Set default tags and then test syncing them to the DB
