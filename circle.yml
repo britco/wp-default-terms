@@ -1,4 +1,6 @@
 machine:
+  environment:
+    WP_VERSIONS: 4.0.7 latest
   timezone:
     America/Los_Angeles
   ruby:
@@ -7,10 +9,20 @@ machine:
     version: 5.5.9
 dependencies:
   pre:
-    - bash bin/install-wp-tests.sh wordpress_test root '' localhost 4.0.7
+    - for WP_VERSION in $WP_VERSIONS;
+      do
+        WP_TESTS_DIR="/tmp/wordpress-tests-lib/${WP_VERSION}";
+        WP_CORE_DIR="/tmp/wordpress/${WP_VERSION}";
+        bash bin/install-wp-tests.sh wordpress_test_${WP_VERSION} root '' localhost ${WP_VERSION};
+      done
   cache_directories:
     - /tmp/wordpress-tests-lib
     - /tmp/wordpress
 test:
   override:
-    - phpunit --debug --log-junit $CIRCLE_TEST_REPORTS/junit/tests.xml
+    - for WP_VERSION in $WP_VERSIONS;
+      do
+        WP_TESTS_DIR="/tmp/wordpress-tests-lib/${WP_VERSION}";
+        WP_CORE_DIR="/tmp/wordpress/${WP_VERSION}";
+        phpunit --debug --log-junit $CIRCLE_TEST_REPORTS/junit/${WP_VERSION}/tests.xml;
+      done

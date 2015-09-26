@@ -22,7 +22,6 @@ class Actions {
 
     add_action('registered_taxonomy', array($this, 'registered_taxonomy'), 20);
     add_action('wp_insert_post', array($this, 'wp_insert_post'), 11, 3);
-    add_action('schema_upgrade', array($this, 'schema_upgrade'));
   }
   
   /**
