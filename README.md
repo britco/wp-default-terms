@@ -5,6 +5,10 @@
 A way to set default terms for taxonomies. Similar how to the "default
 category" functionality works, but for any taxonomy.
 
+## Installation
+
+`composer require britco/wp-default-terms`
+
 ## Usage
 
 ````
