@@ -265,7 +265,7 @@ class Actions {
 							'tax_query'              => array(
 								array(
 									'taxonomy' => sanitize_key( $taxonomy->name ),
-									'terms'    => (int) $term,
+									'terms'    => (int) $term_id,
 									'operator' => 'NOT IN'
 								)
 							)
