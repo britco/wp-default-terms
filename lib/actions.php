@@ -104,7 +104,6 @@ class Actions {
 		}
 
 		$query = rtrim( $query, ',' );
-		error_log( $query );
 		$a     = $wpdb->query( $query );
 
 		// Commit the changes
@@ -220,21 +219,12 @@ class Actions {
 			// First insert the term object if it doesn't exist
 			$defaults = $taxonomy->defaults->get();
 
-			/*array_walk_recursive( $defaults, function ( $default ) use ( $taxonomy ) {
-				$term = term_exists( $default, $taxonomy->name );
-
-				if ( empty( $term ) ) {
-					wp_insert_term( $default, $taxonomy->name );
-				}
-			} );*/
-
 			$term_id = false;
 			foreach( $defaults as $default ) {
 				$term_id = term_exists( $default, $taxonomy->name );
 
 				if ( empty( $term_id ) ) {
 					$term = wp_insert_term( $default[0], $taxonomy->name );
-					var_dump( $default[0] );
 					if( ! is_wp_error( $term ) ) {
 						$term_id = $term['term_id'];
 					}
